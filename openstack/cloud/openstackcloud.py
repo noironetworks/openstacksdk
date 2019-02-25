@@ -23,6 +23,7 @@ import json
 import jsonpatch
 import operator
 import os
+import re
 import six
 import threading
 import time
@@ -3467,6 +3468,20 @@ class _OpenStackCloudMixin(_normalize.Normalizer):
                     "Parameter 'mtu_size' must be greater than 67.")
 
             network['mtu'] = mtu_size
+
+        #apic_params_list = ['apic__nested_domain_name', 'apic__nested_domain_type',
+        #                    'apic__nested_domain_infra_vlan', 'apic__nested_domain_node_network_vlan',
+        #                    'apic__nested_domain_service_vlan', 'apic__nested_domain_allowed_vlans'] 
+        for key in os.environ.keys():
+           if re.search("^apic__", key):
+              apic_param = key
+              if apic_param == "apic__nested_domain_allowed_vlans" or apic_param == 'apic__distinguished_names':
+                 if apic_param == 'apic__distinguished_names':
+                    network[re.sub('__',':',apic_param)] = json.loads(re.sub('u\'', '\'', os.environ[apic_param]).replace("'", "\""))
+                 else:
+                    network[re.sub('__',':',apic_param)] = re.sub('u\'', '\'', os.environ[apic_param])
+              else:
+                 network[re.sub('__',':',apic_param)] = os.environ[apic_param]
 
         data = self.network.post("/networks.json", json={'network': network})
 
